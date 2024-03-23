@@ -2,21 +2,36 @@
 #'
 #' @description Creates a fitness landscape from a kernel density estimation
 #'
-#' @param dat A data set object
-#' @param id Scope (e.g., country codes or individual IDs)
-#' @param time Time (e.g., time periods are given by years, months, ...)
+#' @param x A vector of phenotype values to use
+#' @param de
+#' @param eta
+#' @param mu
+#' @param sigma
+#' @param kde
+#' @param clean
+#' @param save.parameters
+#' @param mean.scale
+#' @param verbose
+#' @param formula
 #'
 #' @return A data frame object that contains a summary of a sample that
 #'     can later be converted to a TeX output using \code{overview_print}
 #' @examples
 #' data(iris)
-#' output_table <- overview_tab(dat = toydata, id = ccode, time = year)
+#' len <- 1000
+#' x <- seq(4.5,7,length.out=len)
+#' rawde <- iris[iris$Species=="virginica","Petal.Length"]
+#' fl <- fitness::landscape(x, rawde, eta=1, mu=2, kde=TRUE, scale="stretch", verbose=FALSE)
+#' plot(x,fl$de,type="n", xlab="Petal length (cm)", ylab="Value of phenotype")
+#' lines(x,fl$de,col="red")
+#' lines(x,fl$w,col="blue")
+#' legend(6.2,1.5,legend=c("Density","Fitness"), col=c("red","blue"), lty=1, cex=0.8)
 #' @export
 #' @importFrom ks "kde"
 #'
 #'
 
-landscape <- landscapes <- function(x, de=NULL, eta=1, mu=(max(x)-min(x))*3/4, sigma=2, clean=FALSE, formula=NULL, save.parameters=TRUE, kde=FALSE, mean.scale=FALSE, verbose=TRUE) {
+landscape <- landscapes <- function(x, de=NULL, eta=1, mu=(max(x)-min(x))*3/4, sigma=2, kde=FALSE, clean=FALSE, save.parameters=TRUE, scale=NULL, verbose=TRUE, formula=NULL) {
   # Perform kernel density estimation, if `kde` option selected
   if (kde) {
     if (verbose) cat("Warning: performing kernel density estimation (KDE) on input vector.\nIf this is a mistake, change `kde=FALSE`.\n")
@@ -99,12 +114,14 @@ landscape <- landscapes <- function(x, de=NULL, eta=1, mu=(max(x)-min(x))*3/4, s
   # entry in a vector, which is about 500ms faster at len=1000 than multiplying
   # by the vector `rep(1,times=len)`
 
-  # If the `mean.scale` option is set to true, both de and w will be scaled so
-  # their means will be equal to 1
-  if (mean.scale) {
+  if (scale=="mean") { # If the `scale` option is set to "mean", both de and w will be scaled so
+    # their means will be equal to 1
     if (verbose) cat("Scaling de and w so their means will be equal to 1.\nIf this is unexpected, change `mean.scale=FALSE`.\n")
     de <- de/mean(de)
     w <- w/mean(w)
+  } else if (scale=="stretch") { # If the `scale` option is set to "stretch",
+    # w will be shifted and scaled to better compare the shape of density and fitness
+    w <- max(de)*(w-min(w))/(max(w)-min(w))
   }
 
   # Return the x, de, and w values
@@ -114,18 +131,6 @@ landscape <- landscapes <- function(x, de=NULL, eta=1, mu=(max(x)-min(x))*3/4, s
     w=w
   ))
 }
-
-
-
-data(iris)
-len <- 100
-x <- seq(4.5,7,length.out=len)
-rawde <- iris[iris$Species=="virginica","Petal.Length"]
-fl <- landscape(x, rawde, eta=1, mu=2, kde=TRUE, mean.scale=TRUE, verbose=FALSE)
-plot(x,fl$de,type="n", xlab="Petal length (cm)", ylab="Value of phenotype")
-lines(x,fl$de,col="red")
-lines(x,fl$w,col="blue")
-legend(6.2,1.5,legend=c("Density","Fitness"), col=c("red","blue"), lty=1, cex=0.8)
 
 
 

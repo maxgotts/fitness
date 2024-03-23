@@ -1,0 +1,324 @@
+\documentclass{article}
+% \documentclass[ebook,12pt,oneside,openany]{memoir}
+
+
+% \pagenumbering{Roman} % For roman page numbers
+
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorinlistoftodos]{todonotes}
+    % \renewcommand{\todo}[1]{}
+\usepackage{setspace}
+\usepackage{bold-extra}
+
+\renewcommand{\Re}{\textrm{Re}}
+\renewcommand{\Im}{\textrm{Im}}
+
+\usepackage{tcolorbox}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+% \usepackage{txfonts}
+\usepackage{xpatch}
+\usepackage[cal=dutchcal]{mathalfa}
+% \usepackage[cal=esstix]{mathalfa}
+\usepackage{bbold}
+\usepackage{bbm}
+% \usepackage{braket}
+\usepackage{centernot}
+\usepackage{marvosym}
+\usepackage{wasysym}
+
+\renewcommand{\comment}[#1]{}
+
+\usepackage[hidelinks]{hyperref}
+
+% \usepackage{hanging}
+
+\usepackage{graphics}
+\graphicspath{{./images/}}
+
+\usepackage{csquotes}
+\usepackage[style=science,sortcites=true]{biblatex}
+% \usepackage[style=alphabetic,sorting=none,giveninits=true,doi=true,isbn=false,url=false,eprint=false,sortcites=true]{biblatex}
+% \let\cite=\supercite
+%bibstyle=nature,citestyle=numeric-comp
+\addbibresource{biblio.bib}
+
+\usepackage{styles}
+
+\begin{document}
+% \spacing{2}
+% \pagenumbering{gobble}
+
+{\large
+    \spacing{1.25}
+    \hspace*{0pt}\hfill\textbf{Certificate in Applied and Computational Mathematics}
+    
+    \hspace*{0pt}\hfill\textsc{Independent Work}\bigskip
+}
+
+{\bf\Large
+    \noindent Extracting fitness landscapes from phenotype distributions
+}\bigskip
+
+{\scshape\large
+    \noindent Max Gotts, advised by Professor Charles Fefferman
+}\bigskip
+
+\spacing{1.15}
+
+\renewcommand{\abstractname}{\textsc{Abstract}}
+\begin{abstract}\noindent\normalsize
+    Fitness landcapes are incredibly powerful tools for visualizing the action of natural selection on rapid timescales. However, collecting the relevant empirical data to generate them is costly and time-consuming. This article creates a simple model for generation-to-generation natural selection according to a theoretical fitness landscape, incorporates heritability as a Gaussian convolution, and incomplete generation segregation as a geometric progression term. The asymptotic results of iterated application of this selection operator on reasonable phenotype distribution functions is convergence to the Perron-Frobenius eigenfunction. The naive approach to determining the underling fitness landscape from this eigenfunction via the convolution theorem is highly unstable, thus is not robust to even minor errors in the data. By finding the global minimum of a loss function designed to account for this instability, a closed-form solution can be calculated. From this, an algorithm was designed and adapted to run on $1,000$ data points in under $10$ seconds, and was implemented in an R package as \textit{fitness}::\textit{landscape}.
+
+\begin{center}\textbf{Keywords:} evolutionary ecology $\cdot$ rapid evolution $\cdot$ adaptive landscape $\cdot$ fitness surface $\cdot$ evolutionary biology $\cdot$ mathematical methods\end{center}
+\end{abstract}
+
+
+\noindent \textbf{\textsc{Introduction}}\\ Fitness landscapes are incredibly valuable tools for understanding short-term evolutionary dynamics. They provide insight into the methods and patterns of natural selection. Recent work has demonstrated that balancing selection may occur by annually fluctuating directional selection \autocite{losos et al.}, and $[\cdots]$
+
+\bigskip\noindent\textbf{\textsc{Mathematical framework}}\\
+We begin by constructing a model of natural selection which operates on quantitative (i.e. phenotypic) traits on a generation-by-generation scale. This model is an operator that acts on the distribution of each trait in the population (i.e. a density or smoothed raw count, depending on the scaling), and produces new distribution of traits after selection and reproduction occur. It was assumed that selection occurs at reproduction, so that fitness is defined as the reproductive value of the trait: the number (or proportion) of new individuals produced from reproduction is $wd$ where $w$ is the fitness function and $d$ is the distribution function. The offspring of an individual with phenotype $\varphi$ is not necessarily $\varphi$. This model assumes that
+$$\varphi_\textrm{offspring}\ \big|\ \varphi_\textrm{parent}\sim\textrm{Gaussian}\big(\varphi_\textrm{parent},\mu\big)$$
+Which follows the literature of heritability \autocite{heritability follows normal}. Then the offsprings' contribution to the next is distribution of traits is $\mathcal G_\mu\star(wd)$. For $0\le c<1$ the proportion of individuals that survive from one generation to the next.
+
+$$\mathcal S:d\mapsto cd+\mathcal G_\mu\star(wd)$$
+$\mathcal S$ acts on $\mathcal F$, the Hilbert space of $L^2(\R^n)$ functions.
+
+\bigskip\noindent\textbf{\textsc{Convergence of iterated application of $\mathcal S$}}\\
+The first question we must answer is whether or not $\mathcal S^nd_0$ converges (in some fashion) to a consistent function, irrespective of $d_0$.
+
+As given above,
+$$\mathcal Sd=cd+\mathcal G_\mu\star(wd)$$
+Then we can adjust this by defining $\mathcal T$ as:
+$$\mathcal Tf=w^\frac12\mathcal S\left(w^{-\frac12}f\right)=cf+w^\frac12\mathcal G_\mu\star\left(w^\frac12f\right)$$
+We can prove that the image of $\mathcal T$ is within $L^2(\R^n)$ if we use the assumption that,
+$$\int_{\R^n}\int_{\R^n}w(x)w(y)\ dy\ dx<\infty$$
+As follows:
+\begin{align*}
+    \big\|\mathcal Tf\big\|^2&=\int_{\R^n}\left|cf(x)+\int_{\R^n}w^\frac12(x)G(x-y)w^\frac12(y)f(y)\ dy\right|^2\ dx \\
+    % &\le\int_{\R^n}\big|cf(x)\big|^2+\int_{\R^n}\int_{\R^n}\Big|w^\frac12(x)G(x-y)w^\frac12(y)f(y)\Big|^2\ dy\ dx \\
+    &\le\int_{\R^n}\big|cf(x)\big|^2+\int_{\R^n}\int_{\R^n}\Big|w^\frac12(x)G(x-y)w^\frac12(y)\Big|^2\cdot\Big|f(y)\Big|^2\ dy\ dx \\
+    &\le\big\|f\|^2\left(c+\int_{\R^n}\int_{\R^n}w(x)G^2(x-y)w(y)\ dy\ dx\right) \\
+    &\le\big\|f\|^2\left(c+\int_{\R^n}\int_{\R^n}w(x)w(y)\ dy\ dx\right) <\infty
+\end{align*}
+The operator $\mathcal T$ has the advantage that if we use the $K(x,y)$ operator definition,
+$$\mathcal Tf=\int_{\R^n}K(x,y)f(y)\ dy$$
+Then the required $K(x,y)=c\delta(x-y)+w^\frac12(x)\mathcal G_\mu(x-y)w^\frac12(y)$ is symmetric and real. Thus $\mathcal T$ is self-adjoint; and since $\mathcal T$ is the composition of three compact operators—the multiplication-by-$w^\frac12$ operator, the $\mathcal G_\mu$-convolution operator, and the multiplication-by-$w^{-\frac12}$ operator—$\mathcal T$ is also compact.
+
+$\mathcal T$ is also positive semidefinite, which we can prove by defining $\nu$ as the covariance matrix such that $\mathcal G_\nu\star\mathcal G_\nu=\mathcal G_\mu$. Then,
+\begin{align*}
+    \big\langle\mathcal Tf,f\big\rangle&=\left\langle cf+w^{\frac12}\mathcal G_\mu\star(w^{\frac12}f),f\right\rangle\\
+    &=c\big\|f\big\|^2+\left\langle w^{\frac12}\mathcal G_\nu\star\mathcal G_\nu\star(w^{\frac12}f),f\right\rangle \\
+    &=c\big\|f\big\|^2+\left\langle\mathcal G_\nu\star\mathcal G_\nu\star(w^{\frac12}f),w^{\frac12}f\right\rangle \\
+    &=c\big\|f\big\|^2+\left\langle\mathcal G_\nu\star w^{\frac12}f,\mathcal G_\nu\star w^{\frac12}f\right\rangle\ge0
+\end{align*}
+Thus $\mathcal T$ satisfies all conditions of Perron-Frobenius theorem. 
+
+Therefore $\mathcal T$'s eigenvalues are all real, there exists an orthonormal eigenbasis, and the dominant eigenvalue's eigenspace is one-dimensional. We will refer to the eigenbasis of $\mathcal T$ as $e_i$ for various $i$'s.
+
+To convert the eigenvalues of $\mathcal T$ back to $\mathcal S$ we may do the following:
+$$\lambda_iw^{-\frac12}e_i=w^{-\frac12}\mathcal Te_i=\mathcal S\left(w^{-\frac12}e_i\right)$$
+Therefore there is a one-to-one relation of eigenvectors $e_i$ of $\mathcal T$ to the eigenvectors $r_i=w^{-\frac12}e_i$ of $\mathcal S$. This relation preserves eigenvalues so that if and only if $\lambda_i$ is the eigenvalue of $e_i$ then it is the eigenvalue of $r_i$. It is not necessarily the case that the $r_i$ form an orthonormal basis, though, as the expression,
+\begin{align*}
+    \big\langle r_i,r_j\big\rangle&=\big\langle w^{-\frac12}e_i,w^{-\frac12}e_j\big\rangle \\
+    &=\int_{\R^n}w\inv e_ie_j
+\end{align*}
+Is not necessarily $0$ or $1$ according to $i-j$. However we must show that any $d_0$ can be represented as the linear combination of $r_i$'s. Since $e_i$ form an eigenbasis, we can represent $w^{\frac12}d_0$ as
+$$w^{\frac12}d_0=\sum_i\alpha_ie_i=\sum_i\alpha_iw^{\frac12}r_i$$
+So that $d_0=\sum_i\alpha_ir_i$.
+
+Let $d_e$ be the dominant eigenfunction of $\mathcal S$ (some specific $r_i$), with eigenvalue $\lambda_e$. Then if we have an input $d_0=\sum_i\alpha_ir_i+\alpha_ed_e$ such that $\alpha_e\ne0$, then the sequence $d_0,\ \lambda_e\inv\mathcal Sd_0,\ \lambda_e^{-2}\mathcal S^2d_0,\ \cdots$ can be written as:
+$$\sum_i\alpha_ir_i+\alpha_ed_e,\ \sum_i\alpha_i\left(\frac{\lambda_i}{\lambda_e}\right)r_i+\alpha_ed_e,\ \sum_i\alpha_i\left(\frac{\lambda_i}{\lambda_e}\right)^2r_i+\alpha_ed_e,\ \cdots$$
+And since $\lambda_e>\lambda_i$ this converges to
+$$\frac1{\lambda_e^n}\mathcal S^n\left(\sum_i\alpha_ir_i+\alpha_ed_e\right)\to \alpha_ed_e$$
+From the perspective of $\mathcal T$, we can represent $w^\frac12d_0$ as above using the $e_i$'s and $f_e$ (the $\mathcal T$ eigenfunction which corresponds to $d_e$):
+\begin{align*}
+    d_0&=w^{-\frac12}\sum_i\alpha_ie_i+\alpha_ef_e \\
+    &=\sum_i\alpha_ir_i+\alpha_ed_e
+\end{align*}
+Then we can calculate $\alpha_e$ as:
+\begin{align*}
+    \alpha_e&=\big\langle w^\frac12d_0,f_e\big\rangle \\
+    &=\big\langle w^\frac12d_0,w^{-\frac12}d_e\big\rangle \\
+    &=\big\langle d_0,d_e\big\rangle
+\end{align*}
+Thus we only need that $\big\langle d_0,d_e\big\rangle\ne0$ in order for $\lambda^{-n}\mathcal S^nd_0\to\alpha_ed_e$. 
+
+The dominant eigenfunction $d_e$ will be referred to as the equilibrium distribution landscape, as it is the equilibrium distribution of phenotypes that results from application of $w$ via $\mathcal S$ an arbitrary number of times (to most initial landscapes).
+
+We can rescale $w$ by $1/(\lambda_e-c)$ to convert the equilibrium expression to
+$$\mathcal G_\mu\star(wd_e)=d_e$$
+Which is the easiest expression to manipulate in most cases for the rest of this article.
+% The scaling of $d_e$ does not matter, since in practice  $d_e$ will be phenotype frequency data (as opposed to raw counts), thus $\int_{\R^n}d_e=1$. The linearity of $\mathcal S$ then ensures that a scaling factor can be passed on both sides of the convergence expression so that convergence is to $d_e$ without any effort.
+
+% $$\frac1{\lambda_e^n}\mathcal S^n\left(\sum_i\alpha_ie_i+\alpha_ef_e\right)\to \alpha_ef_e$$
+% we take the $n$\textsuperscript{th} term, and scale it by $w^{-\frac12}$:
+% $$\sum_i\alpha_i\left(\frac{\lambda_i}{\lambda_e}\right)^ne_i+\alpha_ef_e$$
+
+
+
+% \bigskip\noindent\textbf{\textsc{The Perron-Frobenius eigenfunction (distribution landscape) is non-negative}}
+% One important result is that the eigenfunction $d_e$ from the previous result is non-negative everywhere.
+
+% To start, we will prove that $d_e\ge0$ by contradiction. We assume that $d_e\centernot\ge0$ almost everywhere, and we  want to find some $f\in\mathcal F$ such that $f\ge0$ and $\mathcal S^nf\to d_e$. We can observe that $\mathcal S$ preserves non-negativity (i.e. $f\ge0\implies\mathcal Sf\ge0$), so $\mathcal S^nf\ge0$ for all $n$. This will then be a contradiction.
+
+% First we must find an $f\ge0$ which is not orthogonal to $d_e$. We simply have to choose $f(x)=d_e-\inf_{y\in\R^n}d_e(y)+1$, which we can do since $d_e\in\mathcal F$ is bounded. Then $f\ge0$ and has a positive component of $d_e$. Since $w>0$, we know that $\mathcal Sf=G_\mu\star(wf)\ge0$, and the same for $\mathcal S^nf\ge0$ for all $n$. This can be seen from the fact that the Gaussian convolution of a non-negative function is non-negative, and $wd_e\ge0$.
+
+\bigskip\noindent\textbf{\textsc{Positivity of equilibrium distribution landscape}}\\
+For $d_e$ to be biologically reasonable, we need that $d_e\ge0$ everywhere. Since $d_e=\mathcal G_\mu\star(wd_e)$ and $w>0$, if $d_e\ge0$ then $d_e>0$ because the Gaussian convolution of a non-negative function is positive. Therefore either there is a point where $d_e<0$, or $d_e>0$ everywhere (if $d_e<0$ everywhere then we can reverse the sign of $d_e$ without loss of generality).
+
+\bigskip\noindent\textbf{\textsc{Impact of heritability on equilibrium distribution landscape}}\\
+% There is a common conception in evolutionary biology that decreased heritability slows the rate of evolution. In this article we have an explicit model of trait evolution that includes heritability as a key parameter. Thus we can ask if convergence to $d_e$ occurs more slowly if $x$.
+We are able to determine how the equilibrium distribution landscape changes as heritability changes. We can decrease the heritability utilized in this equation by applying a second Gaussian convolution $\mathcal G_\nu$:
+$$\mathcal G_{a(\mu,\nu)}\star(wd_e)=\mathcal G_{\nu}\star\mathcal G_{\mu}\star(wd_e)=\mathcal G_\nu\star d_e$$
+Which works because the convolution of two multivariate Gaussians is another multivariate Gaussian ($a(\mu,\nu)$ is the function that produces the correct factor so that the new multivariate Gaussian is appropriately represented). Thus the above equation demonstrates that if you decrease the heritability, then the resultant equilibrium distribution landscape will be the same landscape but flattened.
+% To determine the rate of convergence, we can look at:
+% \begin{align*}
+%     \big\|\mathcal G_{a(\mu,\nu)}\star(wd_0)\big\|^2&=\big\|\mathcal G_\nu\star\mathcal S^nd_0\big\|^2 \\
+%     =\int_{\R^n}
+% \end{align*}
+
+\bigskip\noindent\textbf{\textsc{Algorithm to extract fitness from frequency}}\\
+The primary goal of this project is to determine $w$ from a given $d_e$, which would allow for the extrapolation of fitness landscapes from real-world phenotypic distribution data. If we knew $d_e$ exactly everywhere, then we could use the convolution theorem from Fourier analysis to rewrite the equilibrium equation of $\mathcal S$,
+$$cd_e+\mathcal G_\mu\star(wd_e)=\lambda d_e$$
+As,
+$$w\propto\frac1{d_e}\mathfrak F\inv\left\{\frac{\mathfrak F\{d_e\}}{\mathfrak F\{\mathcal G_\mu\}}\right\}$$
+The difficulty is that any error on $d_e$ will be magnified by $1/\mathfrak F\{\mathcal G_\mu\}$, which is an exponential. Therefore any inaccuracies in high-frequency range will be amplified, creating errors that mask the true signal. Instead of solving this directly, we can instead create a loss function $\mathcal L_\eta$ which we want to minimize with a choice of $w$. This is:
+$$\mathcal L_\eta(w)=\big\|\mathcal G_\mu\star(wd_e)-d_e\big\|^2+\eta\int_{\C}\big|\mathfrak F\{w\}\big|^2p$$
+With $\|\cdot\|$ being the $L^2$-norm. The first term is the error of $w$ in solving the required equation, and the second term penalizes solutions that are weighted in the high-frequency region, which are generally responsible for biologically absurd results. We can tune $\eta$ so that this minimization is the perfect balance of frequency-penalization and eigenfunction-satisfying.
+
+In reality, we will perform this minimization discretely. Let $\mathcal H_\mu$ be the matrix for a convolution by a Gaussian $\mathcal G_\mu$, let $\mathcal D=\textrm{diag}(d_e)$, and let $\mathcal F=\big(e^{-2\pi i(j-1)(k-1)/n}\big)_{j,k=1}^n$ be the discrete Fourier transform matrix. For the sake of simplicity, the discretized vectors of the functions $w$, $d_e$, and $p$ will be represented by $w$, $d$, and $p$ respectively. Then we wish to minimize,
+\begin{align*}
+    \ell_\eta(w)&=\sum_{i=1}^n\left(\mathcal H_\mu\mathcal Dw-d\right)_i^2+\eta\left|\big(\mathcal Fw\big)_i\right|^2p_i \\
+    &=\sum_{i=1}^n\left(\left(\sum_{j=1}^n\big(\mathcal H_\mu\mathcal D\big)_{i,j}w_j-d_i\right)^2+\eta\left|\sum_{j=1}^n\mathcal F_{i,j}w_j\right|^2p_i\right)
+\end{align*}
+To minimize $\ell_\eta$ we calculate the gradient (with respect to $w$), which is $\nabla\ell_\eta=\big(\partial \ell_\eta/\partial w_k\big)_{k=1}^n$. This can be calculated entrywise:
+\begin{align*}
+    \dfrac{\partial\ell_\eta}{\partial w_k}&=\sum_{i=1}^n\left(\dfrac{\partial}{\partial w_k}\left(\sum_{j=1}^n\big(\mathcal H_\mu\mathcal D\big)_{i,j}w_j-d_i\right)^2+\eta\dfrac{\partial}{\partial w_k}\left|\sum_{j=1}^n\mathcal F_{i,j}w_j\right|^2p_i\right) \\
+    &=\sum_{i=1}^n\left(2\big(\mathcal H_\mu\mathcal D\big)_{i,k}\left(\sum_{j=1}^n\big(\mathcal H_\mu\mathcal D\big)_{i,j}w_j-d_i\right)+\eta f_{k,i}(w)p_i\right) \\
+    % &=\sum_{i=1}^n2\big(\mathcal H_\mu\mathcal D\big)_{i,k}\Big(\big(\mathcal H_\mu\mathcal Dw\big)_i-d_i\Big)+\sum_{i=1}^n\eta f_{k,i}(w)p_i \\ 
+    &=2\sum_{i=1}^n\big(\mathcal H_\mu\mathcal D\big)_{i,k}\big(\mathcal H_\mu\mathcal Dw\big)_i-2\sum_{i=1}^n\big(\mathcal H_\mu\mathcal D\big)_{i,k}d_i+\sum_{i=1}^n\eta f_{k,i}(w)p_i \\ 
+    &=2\Big(\big(\mathcal H_\mu\mathcal D\big)^\top\big(\mathcal H_\mu\mathcal D\big)w\Big)_k-2\Big(\big(\mathcal H_\mu\mathcal D\big)^\top d\Big)_k+\sum_{i=1}^n\eta f_{k,i}(w)p_i
+\end{align*}
+Where $f_{k,i}(w)$ is defined as the expression it replaces:
+$$f_{k,i}(w)=\dfrac{\partial}{\partial w_k}\left|\sum_{j=1}^n\mathcal F_{i,j}w_j\right|^2$$
+Since $|\cdot|^2$ is not a holomorphic function, we must calculate $f_{k,i}(w)$ through explicit means. By replacing the sum $\sum_{j=1}^n\mathcal F_{i,j}w_j$ with $F_kw_k+C_k$, we can calculate this derivative as:
+\begin{align*}
+    f_{k,i}(w)&=\dfrac{\partial}{\partial w_k}\Big|F_kw_k+C_k\Big|^2 \\
+    &=\dfrac{\partial}{\partial w_k}\Big(\big(\Re(F_k)w_k+\Re(C_k)\big)^2+\big(\Im(F_k)w_k+\Im(C_k)\big)^2\Big) \\
+    &=2\Re(F_k)\big(\Re(F_k)w_k+\Re(C_k)\big)+2\Im(F_k)\big(\Im(F_k)w_k+\Im(C_k)\big) \\
+    &=2\Big(\big(\Re(F_k)^2w_k+\Re(F_k)\Re(C_k)\big)+\big(\Im(F_k)^2w_k+\Im(F_k)\Im(C_k)\big)\Big)
+\end{align*}
+Since $C_k=\sum_{j=1,j\ne k}^n\mathcal F_{i,j}w_j$, we can change this last line to:
+\begin{align*}
+    \dfrac12f_{k,i}(w)&=\Re(\mathcal F_{i,k})^2w_k+\Re(\mathcal F_{i,k})\sum_{\substack{j=1\\j\ne k}}^n\Re\left(\mathcal F_{i,j}\right)w_j+\Im(\mathcal F_{i,k})^2w_k+\Im(\mathcal F_{i,k})\sum_{\substack{j=1\\j\ne k}}^n\Im\left(\mathcal F_{i,j}\right)w_j \\
+    % &=\Re(\mathcal F_{i,k})\sum_{j=1}^n\Re(\mathcal F_{i,j})w_j+\Im(\mathcal F_{i,k})\sum_{j=1}^n\Im(\mathcal F_{i,j})w_j \\
+    &=\sum_{j=1}^n\Big(\Re(\mathcal F_{i,k})\Re(\mathcal F_{i,j})+\Im(\mathcal F_{i,k})\Im(\mathcal F_{i,j})\Big)w_j \\
+    &=\sum_{j=1}^n\varphi_{i,j}^{(k)}w_j \\
+    &=\big(\varphi^{(k)}w\big)_i
+\end{align*}
+Where $\varphi_{i,j}^{(k)}=\Re(\mathcal F_{i,k})\Re(\mathcal F_{i,j})+\Im(\mathcal F_{i,k})\Im(\mathcal F_{i,j})$ are the coefficients of the $k$-dependent matrix $\varphi^{(k)}$.
+
+Therefore we have,
+\begin{align*}
+    \dfrac12\nabla\ell_\eta&=\left(\Big(\big(\mathcal H_\mu\mathcal D\big)^\top\big(\mathcal H_\mu\mathcal D\big)w\Big)_k-\Big(\big(\mathcal H_\mu\mathcal D\big)^\top d\Big)_k+\eta\sum_{i=1}^n\big(\varphi^{(k)}w\big)_ip_i\right)_{k=1}^n \\
+    &=\big(\mathcal H_\mu\mathcal D\big)^\top\big(\mathcal H_\mu\mathcal D\big)w-\big(\mathcal H_\mu\mathcal D\big)^\top d+\eta\left(\sum_{i=1}^n\big(\varphi^{(k)}w\big)_ip_i\right)_{k=1}^n
+\end{align*}
+In order to solve this as a homogeneous system of equations, we need to turn the final vector term into a product of a matrix and $w$. This term is,
+\begin{align*}
+    \sum_{i=1}^n\big(\varphi^{(k)}w\big)_ip_i&=\varphi^{(k)}w\cdot p \\
+    % &=\left\langle w, \varphi^{(k)\top} p\right\rangle \\
+    &=\big(p^\top\varphi^{(k)}\big)w
+\end{align*}
+Then we can define the matrix $\mathcal M$,
+\begin{align*}
+    \mathcal M=\Big(p^\top\varphi^{(k)}\Big)_{k=1}^n
+\end{align*}
+Which has the property that,
+\begin{align*}
+    \big(\mathcal Mw\big)_k&=\Big(\Big(p^\top\varphi^{(k)}\Big)_{k=1}^nw\Big)_k \\
+    &=\Big(\Big(p^\top\varphi^{(k)}w\Big)_{k=1}^n\Big)_k \\
+    &=p^\top\varphi^{(k)}w
+\end{align*}
+Which is exactly the final term we are interested in.
+% We can also simplify the first term, $\big(\mathcal H_\mu\mathcal D\big)^\top\big(\mathcal H_\mu\mathcal D\big)w$ to be $\big(\mathcal H_\mu\mathcal D\big)$
+Therefore we have the matrix we need to write the gradient as a homogeneous system.
+\begin{align*}
+    \dfrac12\nabla\ell_\eta&=\left[\mathcal D\mathcal H_\mu^\top\mathcal H_\mu\mathcal D+\eta\Big(p^\top\varphi^{(k)}\Big)_{k=1}^n\right]w-\mathcal D\mathcal H_\mu^\top \mathcal D\mathbbm1
+\end{align*}
+When $\nabla\ell_\eta=1$—the minimizer solution we are looking for—this is exactly:
+\begin{align*}
+    w&=\left[\mathcal D\mathcal H_\mu^\top\mathcal H_\mu\mathcal D+\eta\Big(p^\top\varphi^{(k)}\Big)_{k=1}^n\right]\inv\mathcal D\mathcal H_\mu^\top \mathcal D\mathbbm1
+\end{align*}
+This provides a closed form solution for our algorithm, which we write as $\psi_\eta(d_e)$ to highlight the importance of $\eta$ as a ``balancing'' tuning parameter:
+$$\psi_\eta(d_e):=\left[\textrm{diag}\big(d_e\big)\mathcal H_\mu^\top\mathcal H_\mu\textrm{diag}\big(d_e\big)+\eta\Big(p^\top\varphi^{(k)}\Big)_{k=1}^n\right]\inv\textrm{diag}\big(d_e\big)\mathcal H_\mu^\top\textrm{diag}\big(d_e\big)\mathbbm1$$
+% This allows us to store $\textrm{diag}\big(d_e\big)^2$ and $\mathcal H_\mu$ in memory separately without incurring efficiency costs due to multiple multiplication.
+The time complexity of this algorithm is nontrivial, and depends on the prioritization of how concrete each parameter is. For instance, we want to allow $\eta$ to vary freely so that we can rapidly test various levels of tuning. For the same reason, we want to be able to adjust $\mu$ (that is, $\mathcal H_\mu$) to understand the qualitative effects of heritability on the fitness landscape. We also might test different variations of the same $d_e$—for instance, various levels of Savitzky-Golay filtering to smooth out artifacts—so it should not be too expensive to re-run the entire program on a new $d_e$ with the same parameters. And finally, testing different frequency penalties $p$ may allow for overall better fitting. This order of prioritization ($\eta$, $\mu$, $d_e$, and $p$) guides the derivation of a more effective implementation of $\psi_\eta$.
+
+Benchmarking R code for $1000$ iterations, the slowest parts of this algorithm are by far the generation of $\mathcal H_\mu^\top$ and $\mathcal M=\big(p^\top\varphi^{(k)}\big)_{k=1}^n$, and the first term's product $\textrm{diag}\big(d_e\big)\mathcal H_\mu^\top\mathcal H_\mu\textrm{diag}\big(d_e\big)$.
+
+The naive approach to calculating $\mathcal H_\mu$ is,
+$$\mathcal H_\mu=\mathcal F\inv\textrm{diag}\big(\mathcal Fg_\mu\big)\mathcal F$$
+Where $g_\mu$ is the Gaussian column vector for parameter $\mu$. However, the $n\times n$ matrix inversions and multiplications take far too long for this to be a viable approach. Let $\textrm{wrap}_k(v)$ be a wrap-around function that takes a vector $v$ returns the vector $\big(v_k,\cdots,v_n,v_1,\cdots,v_{k-1}\big)$. Then we can write $\mathcal H_{\mu}$ as:
+$$\big(\mathcal H_{\mu}\big)_k=\Big(g_\mu,\ \textrm{wrap}_n(g_\mu),\ \textrm{wrap}_{n-1}(g_\mu),\ \xdots,\ \textrm{wrap}_{2}(g_\mu)\Big)$$
+At $n=1000$, the old algorithm takes $12$ seconds, and this new one takes only $500$ milliseconds. We can apply a similar technique for $\mathcal H^\top\mathcal H$. Let us define $c(k)=1$ when $k=1$ and $n+2-k$ otherwise as the integer such that $\mathcal H_{\mu,\cdot,k}=\textrm{wrap}_{c(k)}$. Then:
+\begin{align*}
+    \big(\mathcal H_\mu^\top\mathcal H_\mu\big)_{i,j}&=\big(\mathcal H_\mu\big)_{\cdot,i}\cdot\big(\mathcal H_\mu\big)_{\cdot,j} \\
+    &=\textrm{wrap}_{c(i)}\big(g_\mu\big)\cdot\textrm{wrap}_{c(j)}\big(g_\mu\big) \\
+    &=g_\mu\cdot\textrm{wrap}_{c(i)-c(j)\textrm{ mod }n}\big(g_\mu\big)
+\end{align*}
+And $c(i)-c(j)\equiv j-i$ mod $n$. This indicates that the columns of $\mathcal H_\mu^\top\mathcal H$ are, as with $\mathcal H_\mu$, all identical and vertically offset. The general column is:
+$$h_\mu=\Big(g_\mu\cdot\textrm{wrap}_{n}\big(g_\mu\big),\ g_\mu\cdot\textrm{wrap}_{n-1}\big(g_\mu\big),\ \cdots,\ g_\mu\cdot\textrm{wrap}_2\big(g_\mu\big),\ g_\mu\cdot g_\mu\Big)^\top$$
+And the full matrix is:
+$$\mathcal H_\mu^\top\mathcal H_\mu=\Big(\textrm{wrap}_n\big(h_\mu\big),\ \textrm{wrap}_{n-1}\big(h_\mu\big),\ \cdots,\ \textrm{wrap}_2\big(h_\mu\big),\ h_\mu\Big)$$
+Benchmarking $\mathcal H^\top\mathcal H$ versus this algorithm with $n=1000$ demonstrates that the new algorithm is small improvement ($830$ versus $540$ milliseconds).
+
+It turns out that calculating $\mathcal M$ is actually very straightforward, provided we can make a critical assumption about $p$. If we assume that $p$ is an exponential with coefficient $\sigma$, or in continuous space $p(x)=e^{\sigma x}$ for $x\in[0,1]$, then we can vastly simplify this computation by turning $p^\top\varphi^{(k)}$ into a geometric sum of multiple-angle formulae.
+\begin{align*}
+    \mathcal M_{r,c}&=\sum_{f=1}^np_f\varphi_{f,c}^{(r)} \\
+    &=\sum_{f=1}^n\exp\left(\frac{\sigma(f-1)}{n-1}\right)\left(\cos\left(\frac{2\pi (f-1)(c-1)}n\right)\cos\left(\frac{2\pi (f-1)(c-1)}n\right)+\right.\\
+    &\left.\tab\tab\sin\left(\frac{2\pi (f-1)(r-1)}n\right)\sin\left(\frac{2\pi (f-1)(c-1)}n\right)\right) \\
+    &=\sum_{f=1}^n\exp\left(\frac{\sigma(f-1)}{n-1}\right)\Re\left[\left(\cos\left(\frac{2\pi (f-1)(c-1)}n\right)+i\sin\left(\frac{2\pi fc}n\right)\right)\right.
+    \\&\left.\tab\tab\left(\cos\left(\frac{2\pi (f-1)(r-1)}n\right)-i\sin\left(\frac{2\pi (f-1)(r-1)}n\right)\right)\right] \\
+    &=\Re\left[\sum_{f=1}^n\exp\left(\frac{\sigma(f-1)}{n-1}+\frac{2\pi i (f-1)(c-r)}n\right)\right] \\
+    &=\Re\left(\frac{1-\theta(r-c)^n}{1-\theta(r-c)}\right)
+\end{align*}
+Where,
+$$\theta(\Delta)=\exp\left(\frac\sigma{n-1}-\frac{2\pi i\Delta}n\right)$$
+This speeds up the algorithm for constructing $\mathcal M_{r,c}$ substantially. For $n=1000$, this decreases the runtime from $\sim45$ minutes to a mere $3$ seconds.
+
+We cannot convert any further terms in $\psi_\eta(de)$ to explicit representations because they depend on $d_e$. The entire algorithm on $n=1000$ data points runs in less than $10$ seconds from a clean start, and takes less than $7$ seconds if $\mathcal H_\mu$, $\mathcal H_\mu^\top\mathcal H_\mu$, and $\mathcal M$ are all stored in memory (which is only $24$ megabytes in total).
+
+% \bigskip\noindent\textbf{\textsc{Decomposition of $\mathcal S$ and $d_e$ into sums of Gaussians}}\\
+% Certainly within $\epsilon$ we can approximate $w$ by $\sum_{j=1}^n\mathcal W_j$ by the Stone-Weierstrass theorem if we restrict the domain of $w$ and $d_e$ to be a compact set $K\subset\R^n$, and we can do the same for $d_e$ being approximated by. $\sum_{i=1}^n\mathcal E_i$. We need to ensure that under this approximation we can still bound the error on the expression $\lambda d_e=\mathcal Sd_e$. Let $\sum_{i=1}^n\mathcal E_i$ be an approximation of $d_e$ to within $\epsilon$ by Stone-Weierstrass:
+% $$\left\|d_e-\sum_{i=1}^n\mathcal E_i\right\|<\epsilon$$
+% Then we will show that $\left\|\mathcal S\left(d_e-\sum_{i=1}^n\mathcal E_i\right)\right\|<\delta$ where $\delta\to0$ as $\epsilon\to0$. To do this, let $\xi=d_e-\sum_{i=1}^n\mathcal E_i$ so that $\|\xi\|<\epsilon$
+% \begin{align*}
+%     \left\|\mathcal S\left(d_e-\sum_{i=1}^n\mathcal E_i\right)\right\|^2&=\left\|\mathcal S\xi\right\|^2 \\
+%     &=\int_\R\Big(\mathcal G_\mu\star(w\xi)\Big)^2 \\
+%     &=\int_\R\left(\int_\R G(x-y)w(y)\xi(y)\ dy\right)^2dx \\
+%     &\le\int_\R\int_\R G^2(x-y)w^2(y)\xi^2(y)\ dy\ dx \\
+%     &=\int_\R G^2\star(w\xi)^2 \\
+%     &\le\int_\R G^2\int_\R w^2\int_\R\xi^2 \\
+%     &<\|G\|^2\ \|w\|^2\ \epsilon^2
+% \end{align*}
+% Where the fact that $w$ and $G$ are both $L^2$ functions allows us to conclude that the bound on $\|\mathcal S\xi\|<\|G\|\|w\|\epsilon$ goes to $0$ as $\epsilon$ goes to $0$. Thus we can approximate $d_e$ by $\sum_{i=1}^n\mathcal E_i$, and the error's propagation through $\mathcal S$ is controlled.
+
+% Likewise, when we approximate $\mathcal Sd=\sum_{j=1}^n\mathcal G_\mu\star(\mathcal W_jd)$, we must demonstrate that the error remains small. Let $\zeta=w-\sum_{j=1}^n\mathcal W_j$ with $\|\zeta\|<\delta$ as above with $\|\xi\|<\epsilon$. Then:
+% \begin{align*}
+%     \left\|\mathcal Sd-\sum_{j=1}^n\mathcal G_\mu\star(\mathcal W_jd)\right\|^2&=\left\|\mathcal G_\mu\star(wd)-\mathcal G_\mu\star\left(\mathcal \sum_{j=1}^n\mathcal W_jd\right)\right\|^2 \\
+%     &=\left\|\mathcal G_\mu\star\left(\left(w-\sum_{j=1}^n\mathcal W_j\right)d\right)\right\|^2
+%      \\
+%     &=\left\|\mathcal G_\mu\star(\zeta d)\right\|^2 \\
+%     &\le\int_\R G^2\star(\zeta d)^2 \\
+%     &\le\int_\R G^2\int_\R\zeta^2\int_\R d^2 \\
+%     &<\|G\|^2\ \|d\|^2\ \delta^2
+% \end{align*}
+% Which says that $\mathcal S$ can be arbitrarily closely approximated based on how well we approximate $w$ with a sum of $\mathcal W_j$'s (because $G$ and $d$ are both $L^2$ functions).
+
+\bigskip\bigskip\noindent{\large{\textsc{References}}}
+\printbibliography[heading=none]
+\end{document}
